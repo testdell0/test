@@ -1,0 +1,104 @@
+@echo off
+REM ============================================
+REM UV Package Manager Setup for Windows
+REM Automatically configures PATH for current user
+REM No admin rights required
+REM ============================================
+
+echo.
+echo ========================================
+echo UV Package Manager Setup
+echo ========================================
+echo.
+
+REM Get current username automatically
+set "USERNAME=%USERNAME%"
+echo Detected Username: %USERNAME%
+echo.
+
+REM Define UV installation path
+set "UV_PATH=C:\Users\%USERNAME%\.local\bin"
+echo UV Installation Path: %UV_PATH%
+echo.
+
+REM Check if UV is already installed
+if exist "%UV_PATH%\uv.exe" (
+    echo [OK] UV executable found at %UV_PATH%
+    echo.
+) else (
+    echo [WARNING] UV executable not found!
+    echo Please install UV first using PowerShell:
+    echo    Invoke-RestMethod https://astral.sh/uv/install.ps1 ^| Invoke-Expression
+    echo.
+    pause
+    exit /b 1
+)
+
+REM Get current user PATH
+for /f "tokens=2*" %%A in ('reg query "HKCU\Environment" /v Path 2^>nul') do set "CURRENT_PATH=%%B"
+
+REM Check if UV path is already in PATH
+echo Checking if UV is already in PATH...
+echo %CURRENT_PATH% | findstr /C:"%UV_PATH%" >nul
+if %errorlevel% equ 0 (
+    echo [OK] UV path is already in your PATH!
+    echo.
+    goto :verify
+) else (
+    echo [INFO] UV path not found in PATH. Adding it now...
+    echo.
+)
+
+REM Add UV to PATH
+set "NEW_PATH=%UV_PATH%;%CURRENT_PATH%"
+setx PATH "%NEW_PATH%" >nul 2>&1
+
+if %errorlevel% equ 0 (
+    echo [SUCCESS] UV path added to user PATH successfully!
+    echo.
+    echo IMPORTANT: Please close and reopen your command prompt/PowerShell
+    echo            for the changes to take effect.
+    echo.
+) else (
+    echo [ERROR] Failed to update PATH. You may need to set it manually.
+    echo.
+    pause
+    exit /b 1
+)
+
+:verify
+echo ========================================
+echo Verification
+echo ========================================
+echo.
+echo Current PATH entries containing 'uv':
+echo %PATH% | findstr /I "uv"
+echo.
+
+REM Try to run UV (this will work in new sessions)
+echo Attempting to verify UV installation...
+where uv >nul 2>&1
+if %errorlevel% equ 0 (
+    echo.
+    echo [SUCCESS] UV is accessible! Version info:
+    uv --version
+    echo.
+) else (
+    echo.
+    echo [INFO] UV is not yet accessible in this session.
+    echo       Please close and reopen your terminal.
+    echo.
+)
+
+echo ========================================
+echo Setup Complete!
+echo ========================================
+echo.
+echo Next Steps:
+echo 1. Close this window and all PowerShell/CMD windows
+echo 2. Open a new PowerShell window
+echo 3. Verify by running: uv --version
+echo 4. Create a virtual environment: uv venv --python 3.13
+echo.
+
+pause
